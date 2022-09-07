@@ -182,7 +182,7 @@ const ExpandedChart: React.FC<Props> = (props) => {
           if (
             oldControllers &&
             oldControllers[object.metadata.uid]?.status?.conditions ==
-              object.status?.conditions
+            object.status?.conditions
           ) {
             return oldControllers;
           }
@@ -585,18 +585,24 @@ const ExpandedChart: React.FC<Props> = (props) => {
   };
 
   const renderUrl = () => {
-    if (url) {
-      return (
-        <Url href={url} target="_blank">
-          <i className="material-icons">link</i>
-          {url}
-        </Url>
-      );
-    }
-
     const service: any = components?.find((c) => {
       return c.Kind === "Service";
     });
+
+    if (url) {
+      return (
+        <p>
+          <Url>
+            <Bolded>Internal URI:</Bolded>
+            {`${service.Name}.${service.Namespace}.svc.cluster.local`}
+          </Url>
+          <Url>
+            <Bolded>External URI:</Bolded>
+            {url}
+          </Url>
+        </p>
+      );
+    }
 
     if (loading) {
       return (
@@ -711,6 +717,12 @@ const ExpandedChart: React.FC<Props> = (props) => {
   useEffect((): any => {
     let isSubscribed = true;
 
+    const knativeServingComponent = components?.find((c) => c.RawYAML.apiVersion === 'serving.knative.dev/v1' && c.Kind === 'Service')
+    if (knativeServingComponent?.RawYAML?.metadata?.annotations?.['external-dns.alpha.kubernetes.io/hostname']) {
+      setUrl(`https://${knativeServingComponent.RawYAML.metadata.annotations['external-dns.alpha.kubernetes.io/hostname']}`)
+      return;
+    }
+
     const ingressComponent = components?.find((c) => c.Kind === "Ingress");
 
     const ingressName = ingressComponent?.Name;
@@ -816,7 +828,7 @@ const ExpandedChart: React.FC<Props> = (props) => {
                 shouldUpdate={
                   currentChart.latest_version &&
                   currentChart.latest_version !==
-                    currentChart.chart.metadata.version
+                  currentChart.chart.metadata.version
                 }
                 latestVersion={currentChart.latest_version}
                 upgradeVersion={handleUpgradeVersion}
@@ -1042,11 +1054,11 @@ const TabButton = styled.div`
   border-radius: 20px;
   text-shadow: 0px 0px 8px
     ${(props: { devOpsMode: boolean }) =>
-      props.devOpsMode ? "#ffffff66" : "none"};
+    props.devOpsMode ? "#ffffff66" : "none"};
   cursor: pointer;
   :hover {
     color: ${(props: { devOpsMode: boolean }) =>
-      props.devOpsMode ? "" : "#aaaabb99"};
+    props.devOpsMode ? "" : "#aaaabb99"};
   }
 
   > i {
