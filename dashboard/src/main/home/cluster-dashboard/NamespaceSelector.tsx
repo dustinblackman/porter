@@ -49,23 +49,19 @@ export default class NamespaceSelector extends Component<PropsType, StateType> {
             urlNamespace = "ALL";
           }
 
-          let defaultNamespace = "default";
-          const availableNamespaces = res.data.filter(
-            (namespace: any) => {
-              return namespace.status !== "Terminating";
+          let defaultNamespace = "ALL";
+          const availableNamespaces = res.data.filter((namespace: any) => {
+            return namespace.status !== "Terminating";
+          });
+          availableNamespaces.forEach((x: { name: string }, i: number) => {
+            namespaceOptions.push({
+              label: x.name,
+              value: x.name,
+            });
+            if (x.name === urlNamespace) {
+              defaultNamespace = urlNamespace;
             }
-          );
-          availableNamespaces.forEach(
-            (x: { name: string }, i: number) => {
-              namespaceOptions.push({
-                label: x.name,
-                value: x.name,
-              });
-              if (x.name === urlNamespace) {
-                defaultNamespace = urlNamespace;
-              }
-            }
-          );
+          });
           this.setState({ namespaceOptions }, () => {
             if (
               urlNamespace === "" ||

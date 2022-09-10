@@ -19,9 +19,9 @@ type StateType = {
 export default class SortSelector extends Component<PropsType, StateType> {
   state = {
     sortOptions: [
+      { label: "Alphabetical", value: "Alphabetical" },
       { label: "Newest", value: "Newest" },
       { label: "Oldest", value: "Oldest" },
-      { label: "Alphabetical", value: "Alphabetical" },
       { label: "Next Run", value: "Next Run" },
     ] as { label: string; value: string }[],
   };
@@ -29,17 +29,17 @@ export default class SortSelector extends Component<PropsType, StateType> {
   getSortOptions() {
     if (this.props.currentView === "jobs") {
       return [
+        { label: "Alphabetical", value: "Alphabetical" },
         { label: "Newest", value: "Newest" },
         { label: "Oldest", value: "Oldest" },
-        { label: "Alphabetical", value: "Alphabetical" },
         { label: "Next Run", value: "Next Run" },
       ];
     }
 
     return [
+      { label: "Alphabetical", value: "Alphabetical" },
       { label: "Newest", value: "Newest" },
       { label: "Oldest", value: "Oldest" },
-      { label: "Alphabetical", value: "Alphabetical" },
     ];
   }
 
