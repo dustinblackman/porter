@@ -88,22 +88,22 @@ func (parsed *ParsedObjs) GetControlRel() {
 				continue
 			}
 
-			idx := 0
+			replicas := 0
 			switch rs.(type) {
 			case float64:
-				idx = int(rs.(float64))
+				replicas = int(rs.(float64))
 			default:
-				idx = rs.(int)
+				replicas = rs.(int)
 			}
 
-			for j := 0; j < idx; j++ {
+			for j := 0; j < replicas; j++ {
 				cid := len(parsed.Objects) + len(children)
 				crel := ControlRel{
 					Relation: Relation{
 						Source: obj.ID,
 						Target: cid,
 					},
-					Replicas: rs.(int),
+					Replicas: replicas,
 				}
 
 				pod := Object{
