@@ -596,7 +596,7 @@ const ExpandedChart: React.FC<Props> = (props) => {
             <Bolded>Internal URI:</Bolded>
             {`${service.Name}.${service.Namespace}.svc.cluster.local`}
           </Url>
-          <Url>
+          <Url href={url} target="_blank">
             <Bolded>External URI:</Bolded>
             {url}
           </Url>
