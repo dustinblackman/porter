@@ -28,7 +28,7 @@ type KNativeYamls struct {
 	YAMLs  []map[string]interface{}
 }
 
-func (k *KNativeYamls) appendYaml(yaml map[string]interface{}) {
+func (k *KNativeYamls) AppendYaml(yaml map[string]interface{}) {
 	k.Lock()
 	defer k.Unlock()
 
@@ -48,11 +48,11 @@ func (k *KNativeYamls) RequestYaml(resourceRequest KNativeResourceRequest) {
 		return
 	}
 
-	k.appendYaml(res)
+	k.AppendYaml(res)
 }
 
 func makeKNativeResourceRequest(client *rest.RESTClient, resourceRequest KNativeResourceRequest) (map[string]interface{}, error) {
-	req := client.Get().AbsPath("/apis/" + resourceRequest.api).
+	req := client.Get().AbsPath(resourceRequest.api).
 		Namespace(resourceRequest.namespace).
 		Resource(resourceRequest.resource)
 
@@ -76,7 +76,7 @@ func makeKNativeResourceRequest(client *rest.RESTClient, resourceRequest KNative
 	metadata := firstEntry["metadata"].(map[string]interface{})
 	name := metadata["name"].(string)
 
-	req = client.Get().AbsPath("/apis/" + resourceRequest.api).
+	req = client.Get().AbsPath(resourceRequest.api).
 		Namespace(resourceRequest.namespace).
 		Resource(resourceRequest.resource).
 		Name(name)
@@ -108,7 +108,7 @@ func getKnativeYAMLs(agent *kubernetes.Agent, namespace string) ([]map[string]in
 	}
 
 	ksvc, err := makeKNativeResourceRequest(restClient, KNativeResourceRequest{
-		api:           "serving.knative.dev/v1",
+		api:           "/apis/serving.knative.dev/v1",
 		namespace:     namespace,
 		resource:      "services",
 		labelSelector: "",
@@ -124,22 +124,61 @@ func getKnativeYAMLs(agent *kubernetes.Agent, namespace string) ([]map[string]in
 		Wg:     &sync.WaitGroup{},
 		YAMLs:  []map[string]interface{}{},
 	}
+	knativeYamlsReq.AppendYaml(ksvc)
 
 	resourceRequests := []KNativeResourceRequest{
 		{
-			api:           "projectcontour.io/v1",
+			api:           "/apis/serving.knative.dev/v1",
+			name:          namespace,
+			namespace:     namespace,
+			resource:      "routes",
+			labelSelector: "",
+		},
+		{
+			api:           "/apis/serving.knative.dev/v1",
+			name:          namespace,
+			namespace:     namespace,
+			resource:      "configurations",
+			labelSelector: "",
+		},
+		{
+			api:           "/apis/projectcontour.io/v1",
 			name:          namespace,
 			namespace:     namespace,
 			resource:      "httpproxies",
 			labelSelector: "",
 		},
 		{
-			api:           "apps/v1",
+			api:           "/apis/apps/v1",
 			name:          namespace,
 			namespace:     namespace,
 			resource:      "deployments",
 			labelSelector: fmt.Sprintf("serving.knative.dev/revision=%s", revisionName),
 		},
+		{
+			api:           "/api/v1",
+			name:          revisionName,
+			namespace:     namespace,
+			resource:      "services",
+			labelSelector: "networking.internal.knative.dev/serviceType=Public",
+		},
+		{
+			api:           "/api/v1",
+			name:          fmt.Sprintf("%s-private", revisionName),
+			namespace:     namespace,
+			resource:      "services",
+			labelSelector: "networking.internal.knative.dev/serviceType=Private",
+		},
+	}
+
+	domainName, ok := ksvc["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})["external-dns.alpha.kubernetes.io/hostname"].(string)
+	if ok {
+		resourceRequests = append(resourceRequests, KNativeResourceRequest{
+			api:       "/apis/cert-manager.io/v1",
+			name:      domainName,
+			namespace: namespace,
+			resource:  "certificates",
+		})
 	}
 
 	for _, resourceRequest := range resourceRequests {
