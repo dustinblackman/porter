@@ -117,8 +117,6 @@ func getKnativeYAMLs(agent *kubernetes.Agent, namespace string) ([]map[string]in
 		panic(err)
 	}
 
-	revisionName := ksvc["status"].(map[string]interface{})["latestCreatedRevisionName"].(string)
-
 	knativeYamlsReq := KNativeYamls{
 		client: restClient,
 		Wg:     &sync.WaitGroup{},
@@ -148,27 +146,43 @@ func getKnativeYAMLs(agent *kubernetes.Agent, namespace string) ([]map[string]in
 			resource:      "httpproxies",
 			labelSelector: "",
 		},
-		{
-			api:           "/apis/apps/v1",
-			name:          namespace,
-			namespace:     namespace,
-			resource:      "deployments",
-			labelSelector: fmt.Sprintf("serving.knative.dev/revision=%s", revisionName),
-		},
-		{
-			api:           "/api/v1",
-			name:          revisionName,
-			namespace:     namespace,
-			resource:      "services",
-			labelSelector: "networking.internal.knative.dev/serviceType=Public",
-		},
-		{
-			api:           "/api/v1",
-			name:          fmt.Sprintf("%s-private", revisionName),
-			namespace:     namespace,
-			resource:      "services",
-			labelSelector: "networking.internal.knative.dev/serviceType=Private",
-		},
+	}
+
+	revisionStatus := ksvc["status"].(map[string]interface{})
+	latestCreatedRevisionName := revisionStatus["latestCreatedRevisionName"].(string)
+	latestReadyRevisionName := revisionStatus["latestReadyRevisionName"].(string)
+	revisions := []string{latestReadyRevisionName}
+	if latestCreatedRevisionName != latestCreatedRevisionName {
+		revisions = append(revisions, latestCreatedRevisionName)
+	}
+
+	for _, revisionName := range revisions {
+		// TODO need to add configurations to show failed deployments more clearly.
+		revisionResourceRequests := []KNativeResourceRequest{
+			{
+				api:           "/apis/apps/v1",
+				name:          namespace,
+				namespace:     namespace,
+				resource:      "deployments",
+				labelSelector: fmt.Sprintf("serving.knative.dev/revision=%s", revisionName),
+			},
+			{
+				api:           "/api/v1",
+				name:          revisionName,
+				namespace:     namespace,
+				resource:      "services",
+				labelSelector: "networking.internal.knative.dev/serviceType=Public",
+			},
+			{
+				api:           "/api/v1",
+				name:          fmt.Sprintf("%s-private", revisionName),
+				namespace:     namespace,
+				resource:      "services",
+				labelSelector: "networking.internal.knative.dev/serviceType=Private",
+			},
+		}
+
+		resourceRequests = append(resourceRequests, revisionResourceRequests...)
 	}
 
 	domainName, ok := ksvc["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})["external-dns.alpha.kubernetes.io/hostname"].(string)
