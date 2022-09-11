@@ -76,7 +76,7 @@ class ClusterDashboard extends Component<PropsType, StateType> {
     namespace: null as string,
     sortType: localStorage.getItem("SortType")
       ? localStorage.getItem("SortType")
-      : "Newest",
+      : "Alphabetical",
     lastRunStatus: "all" as null,
     currentChart: null as ChartType | null,
     isMetricsInstalled: false,
@@ -117,7 +117,7 @@ class ClusterDashboard extends Component<PropsType, StateType> {
           namespace: "default",
           sortType: localStorage.getItem("SortType")
             ? localStorage.getItem("SortType")
-            : "Newest",
+            : "Alphabetical",
           currentChart: null,
         },
         () => pushQueryParams(this.props, { namespace: "default" })
@@ -131,14 +131,14 @@ class ClusterDashboard extends Component<PropsType, StateType> {
       }
       this.setState(
         {
-          sortType: "Newest",
+          sortType: "Alphabetical",
           currentChart: null,
-          namespace: currentNamespace || "default",
+          namespace: currentNamespace || "ALL",
         },
         () =>
           pushQueryParams(this.props, {
             namespace:
-              this.state.namespace === null ? "default" : this.state.namespace,
+              this.state.namespace === null ? "ALL" : this.state.namespace,
           })
       );
     }
