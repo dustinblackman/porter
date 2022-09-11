@@ -180,6 +180,20 @@ func getKnativeYAMLs(agent *kubernetes.Agent, namespace string) ([]map[string]in
 				resource:      "services",
 				labelSelector: "networking.internal.knative.dev/serviceType=Private",
 			},
+			{
+				api:           "/apis/autoscaling/v2",
+				name:          revisionName,
+				namespace:     namespace,
+				resource:      "horizontalpodautoscalers",
+				labelSelector: "",
+			},
+			{
+				api:           "/apis/autoscaling.internal.knative.dev/v1alpha1",
+				name:          revisionName,
+				namespace:     namespace,
+				resource:      "podautoscalers",
+				labelSelector: "",
+			},
 		}
 
 		resourceRequests = append(resourceRequests, revisionResourceRequests...)
