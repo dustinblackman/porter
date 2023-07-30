@@ -92,7 +92,7 @@ func makeKNativeResourceRequest(client *rest.RESTClient, resourceRequest KNative
 	return jsonResSingle, nil
 }
 
-func getKnativeYAMLs(agent *kubernetes.Agent, namespace string) ([]map[string]interface{}, error) {
+func getKnativeYAMLs(agent *kubernetes.Agent, namespace string, controllersOnly bool) ([]map[string]interface{}, error) {
 	restConf, err := agent.RESTClientGetter.ToRESTConfig()
 	if err != nil {
 		return nil, err
@@ -124,28 +124,31 @@ func getKnativeYAMLs(agent *kubernetes.Agent, namespace string) ([]map[string]in
 	}
 	knativeYamlsReq.AppendYaml(ksvc)
 
-	resourceRequests := []KNativeResourceRequest{
-		{
-			api:           "/apis/serving.knative.dev/v1",
-			name:          namespace,
-			namespace:     namespace,
-			resource:      "routes",
-			labelSelector: "",
-		},
-		{
-			api:           "/apis/serving.knative.dev/v1",
-			name:          namespace,
-			namespace:     namespace,
-			resource:      "configurations",
-			labelSelector: "",
-		},
-		{
-			api:           "/apis/projectcontour.io/v1",
-			name:          namespace,
-			namespace:     namespace,
-			resource:      "httpproxies",
-			labelSelector: "",
-		},
+	resourceRequests := []KNativeResourceRequest{}
+	if !controllersOnly {
+		resourceRequests = append(resourceRequests, []KNativeResourceRequest{
+			{
+				api:           "/apis/serving.knative.dev/v1",
+				name:          namespace,
+				namespace:     namespace,
+				resource:      "routes",
+				labelSelector: "",
+			},
+			{
+				api:           "/apis/serving.knative.dev/v1",
+				name:          namespace,
+				namespace:     namespace,
+				resource:      "configurations",
+				labelSelector: "",
+			},
+			{
+				api:           "/apis/projectcontour.io/v1",
+				name:          namespace,
+				namespace:     namespace,
+				resource:      "httpproxies",
+				labelSelector: "",
+			},
+		}...)
 	}
 
 	revisionStatus := ksvc["status"].(map[string]interface{})
@@ -157,15 +160,16 @@ func getKnativeYAMLs(agent *kubernetes.Agent, namespace string) ([]map[string]in
 	}
 
 	for _, revisionName := range revisions {
+		resourceRequests = append(resourceRequests, KNativeResourceRequest{
+			api:           "/apis/apps/v1",
+			name:          namespace,
+			namespace:     namespace,
+			resource:      "deployments",
+			labelSelector: fmt.Sprintf("serving.knative.dev/revision=%s", revisionName),
+		})
+
 		// TODO need to add configurations to show failed deployments more clearly.
 		revisionResourceRequests := []KNativeResourceRequest{
-			{
-				api:           "/apis/apps/v1",
-				name:          namespace,
-				namespace:     namespace,
-				resource:      "deployments",
-				labelSelector: fmt.Sprintf("serving.knative.dev/revision=%s", revisionName),
-			},
 			{
 				api:           "/api/v1",
 				name:          revisionName,
@@ -196,11 +200,13 @@ func getKnativeYAMLs(agent *kubernetes.Agent, namespace string) ([]map[string]in
 			},
 		}
 
-		resourceRequests = append(resourceRequests, revisionResourceRequests...)
+		if !controllersOnly {
+			resourceRequests = append(resourceRequests, revisionResourceRequests...)
+		}
 	}
 
 	domainName, ok := ksvc["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})["external-dns.alpha.kubernetes.io/hostname"].(string)
-	if ok {
+	if ok && !controllersOnly {
 		resourceRequests = append(resourceRequests, KNativeResourceRequest{
 			api:       "/apis/cert-manager.io/v1",
 			name:      domainName,

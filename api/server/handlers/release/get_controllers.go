@@ -48,7 +48,7 @@ func (c *GetControllersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	yamlArr := grapher.ImportMultiDocYAML([]byte(helmRelease.Manifest))
 
 	if strings.Contains(helmRelease.Manifest, "serving.knative.dev/v1") {
-		knativeYamls, err := getKnativeYAMLs(agent, helmRelease.Namespace)
+		knativeYamls, err := getKnativeYAMLs(agent, helmRelease.Namespace, true)
 		if err != nil {
 			c.HandleAPIError(w, r, apierrors.NewErrInternal(err))
 			return

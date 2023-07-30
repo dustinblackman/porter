@@ -43,7 +43,7 @@ func (c *GetComponentsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		knativeYamls, err := getKnativeYAMLs(agent, helmRelease.Namespace)
+		knativeYamls, err := getKnativeYAMLs(agent, helmRelease.Namespace, false)
 		if err != nil {
 			c.HandleAPIError(w, r, apierrors.NewErrInternal(err))
 			return
