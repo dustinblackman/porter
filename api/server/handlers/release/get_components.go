@@ -9,6 +9,7 @@ import (
 	"github.com/porter-dev/porter/api/server/shared/config"
 	"github.com/porter-dev/porter/api/types"
 	"github.com/porter-dev/porter/internal/helm/grapher"
+	"github.com/porter-dev/porter/internal/models"
 	"github.com/stefanmcshane/helm/pkg/release"
 )
 
@@ -31,6 +32,10 @@ func (c *GetComponentsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	helmRelease, _ := r.Context().Value(types.ReleaseScope).(*release.Release)
 
 	yamlArr := grapher.ImportMultiDocYAML([]byte(helmRelease.Manifest))
+	cluster, _ := r.Context().Value(types.ClusterScope).(*models.Cluster)
+	agent, _ := c.GetAgent(r, cluster, "")
+	yamlArr = addKnativeYamls(helmRelease.Manifest, helmRelease.Namespace, yamlArr, agent, true)
+
 	objects := grapher.ParseObjs(yamlArr, helmRelease.Namespace)
 
 	parsed := grapher.ParsedObjs{

@@ -46,6 +46,7 @@ func (c *GetControllersHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	yamlArr := grapher.ImportMultiDocYAML([]byte(helmRelease.Manifest))
+	yamlArr = addKnativeYamls(helmRelease.Manifest, helmRelease.Namespace, yamlArr, agent, true)
 	controllers := grapher.ParseControllers(yamlArr)
 	retrievedControllers := []interface{}{}
 
