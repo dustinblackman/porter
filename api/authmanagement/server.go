@@ -8,7 +8,6 @@ import (
 
 	grpcreflect "github.com/bufbuild/connect-grpcreflect-go"
 
-	"github.com/porter-dev/porter/ee/integrations/vault"
 	"github.com/porter-dev/porter/internal/repository/credentials"
 	"github.com/porter-dev/porter/internal/repository/gorm"
 
@@ -72,13 +71,13 @@ func NewService() (AuthManagementService, error) {
 	}
 
 	var instanceCredentialBackend credentials.CredentialStorage
-	if envVars.DBEnv.VaultEnabled {
-		instanceCredentialBackend = vault.NewClient(
-			envVars.DBEnv.VaultServerURL,
-			envVars.DBEnv.VaultAPIKey,
-			envVars.DBEnv.VaultPrefix,
-		)
-	}
+	// if envVars.DBEnv.VaultEnabled {
+	// 	instanceCredentialBackend = vault.NewClient(
+	// 		envVars.DBEnv.VaultServerURL,
+	// 		envVars.DBEnv.VaultAPIKey,
+	// 		envVars.DBEnv.VaultPrefix,
+	// 	)
+	// }
 
 	var key [32]byte
 

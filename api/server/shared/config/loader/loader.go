@@ -17,7 +17,6 @@ import (
 	"github.com/porter-dev/porter/api/server/shared/config/env"
 	"github.com/porter-dev/porter/api/server/shared/config/envloader"
 	"github.com/porter-dev/porter/api/server/shared/websocket"
-	"github.com/porter-dev/porter/ee/integrations/vault"
 	"github.com/porter-dev/porter/internal/adapter"
 	"github.com/porter-dev/porter/internal/analytics"
 	"github.com/porter-dev/porter/internal/auth/sessionstore"
@@ -74,17 +73,17 @@ func (e *EnvConfigLoader) LoadConfig() (res *config.Config, err error) {
 	}
 
 	var instanceCredentialBackend credentials.CredentialStorage
-	if envConf.DBConf.VaultEnabled {
-		if envConf.DBConf.VaultAPIKey == "" || envConf.DBConf.VaultServerURL == "" || envConf.DBConf.VaultPrefix == "" {
-			return nil, errors.New("vault is enabled but missing required environment variables [VAULT_API_KEY,VAULT_SERVER_URL,VAULT_PREFIX]")
-		}
-
-		instanceCredentialBackend = vault.NewClient(
-			envConf.DBConf.VaultServerURL,
-			envConf.DBConf.VaultAPIKey,
-			envConf.DBConf.VaultPrefix,
-		)
-	}
+	// if envConf.DBConf.VaultEnabled {
+	// 	if envConf.DBConf.VaultAPIKey == "" || envConf.DBConf.VaultServerURL == "" || envConf.DBConf.VaultPrefix == "" {
+	// 		return nil, errors.New("vault is enabled but missing required environment variables [VAULT_API_KEY,VAULT_SERVER_URL,VAULT_PREFIX]")
+	// 	}
+	//
+	// 	instanceCredentialBackend = vault.NewClient(
+	// 		envConf.DBConf.VaultServerURL,
+	// 		envConf.DBConf.VaultAPIKey,
+	// 		envConf.DBConf.VaultPrefix,
+	// 	)
+	// }
 
 	res = &config.Config{
 		Logger:            lr.NewConsole(sc.Debug),
