@@ -633,17 +633,6 @@ const ExpandedChart: React.FC<Props> = (props) => {
   };
 
   const renderUrl = () => {
-    if (url) {
-      return (
-        <Url>
-          <i className="material-icons">link</i>
-          <a href={url} target="_blank">
-            {url}
-          </a>
-        </Url>
-      );
-    }
-
     const service: any = components?.find((c) => {
       return c.Kind === "Service";
     });
@@ -658,6 +647,23 @@ const ExpandedChart: React.FC<Props> = (props) => {
 
     if (!service?.Name || !service?.Namespace) {
       return;
+    }
+
+    if (url) {
+      return (
+        <p>
+          <Url>
+            <Bolded>Internal URI:</Bolded>
+            {`${service.Name}.${service.Namespace}.svc.cluster.local`}
+          </Url>
+          <Url>
+            <i className="material-icons">link</i>
+            <a href={url} target="_blank">
+              {url}
+            </a>
+          </Url>
+        </p>
+      );
     }
 
     return (
@@ -831,6 +837,18 @@ const ExpandedChart: React.FC<Props> = (props) => {
 
   useEffect((): any => {
     let isSubscribed = true;
+
+    const externalUrl = components?.find(
+      (c) =>
+        c.RawYAML.apiVersion === "serving.knative.dev/v1" &&
+        c.Kind === "Service"
+    )?.RawYAML?.metadata?.annotations?.[
+        "external-dns.alpha.kubernetes.io/hostname"
+      ]
+    if (externalUrl) {
+      setUrl(`https://${externalUrl}`);
+      return;
+    }
 
     const ingressComponent = components?.find(
       (c) =>
