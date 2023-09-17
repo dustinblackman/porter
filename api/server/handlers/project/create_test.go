@@ -45,7 +45,8 @@ func TestCreateProjectSuccessful(t *testing.T) {
 		CapiProvisionerEnabled: true,
 		SimplifiedViewEnabled:  true,
 		HelmValuesEnabled:      false,
-		EnvGroupEnabled:        false,
+		MultiCluster:           false,
+		EnableReprovision:      false,
 	}
 
 	gotProject := &types.CreateProjectResponse{}

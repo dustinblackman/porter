@@ -44,7 +44,8 @@ func (p *ProjectCreateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		CapiProvisionerEnabled: true,
 		SimplifiedViewEnabled:  true,
 		HelmValuesEnabled:      false,
-		EnvGroupEnabled:        false,
+		MultiCluster:           false,
+		EnableReprovision:      false,
 	}
 
 	var err error
@@ -80,7 +81,7 @@ func (p *ProjectCreateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	p.WriteResult(w, r, proj.ToProjectType())
+	p.WriteResult(w, r, proj.ToProjectType(p.Config().LaunchDarklyClient))
 
 	// add project to billing team
 	_, err = p.Config().BillingManager.CreateTeam(user, proj)
@@ -91,7 +92,7 @@ func (p *ProjectCreateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		p.HandleAPIErrorNoWrite(w, r, apierrors.NewErrInternal(err))
 	}
 
-	p.Config().AnalyticsClient.Track(analytics.ProjectCreateTrack(&analytics.ProjectCreateTrackOpts{
+	p.Config().AnalyticsClient.Track(analytics.ProjectCreateTrack(&analytics.ProjectCreateDeleteTrackOpts{
 		ProjectScopedTrackOpts: analytics.GetProjectScopedTrackOpts(user.ID, proj.ID),
 	}))
 }

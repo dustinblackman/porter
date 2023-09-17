@@ -11,7 +11,7 @@ import styled from "styled-components";
 import spinner from "assets/loading.gif";
 import { Context } from "shared/Context";
 import api from "shared/api";
-import { useLogs } from "./utils";
+import { getPodSelectorFromServiceName, useLogs } from "./utils";
 import { Direction, GenericFilterOption, GenericLogFilter, LogFilterName, LogFilterQueryParamOpts } from "./types";
 import dayjs, { Dayjs } from "dayjs";
 import Loading from "components/Loading";
@@ -61,20 +61,12 @@ const LogSection: React.FC<Props> = ({
   const [isPorterAgentInstalling, setIsPorterAgentInstalling] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [logsError, setLogsError] = useState<string | undefined>(undefined);
-  const getSelectorFromServiceQueryParam = (serviceName: string | null | undefined) => {
-    if (serviceName == null) {
-      return undefined;
-    }
-    const match = services?.find(s => s.name == serviceName);
-    if (match == null) {
-      return undefined;
-    }
-    return `${match.name}-${match.type == "worker" ? "wkr" : match.type}`;
-  }
+
   const [selectedFilterValues, setSelectedFilterValues] = useState<Record<LogFilterName, string>>({
     revision: filterOpts?.revision ?? GenericLogFilter.getDefaultOption("revision").value,
     output_stream: filterOpts?.output_stream ?? GenericLogFilter.getDefaultOption("output_stream").value,
-    pod_name: getSelectorFromServiceQueryParam(filterOpts?.service) ?? GenericLogFilter.getDefaultOption("pod_name").value,
+    pod_name: getPodSelectorFromServiceName(filterOpts?.service, services) ?? GenericLogFilter.getDefaultOption("pod_name").value,
+    service_name: filterOpts?.service ?? GenericLogFilter.getDefaultOption("service_name").value,
   });
 
   const createVersionOptions = (number: number) => {
@@ -91,6 +83,9 @@ const LogSection: React.FC<Props> = ({
       return false;
     }
     const version = agentImage.split(":").pop();
+    if (version === "dev") {
+      return true;
+    }
     //make sure version is above v3.1.3
     if (version == null) {
       return false;
@@ -104,14 +99,15 @@ const LogSection: React.FC<Props> = ({
     const patch = parseInt(versionParts[2]);
     if (major < 3) {
       return false;
+    } else if (major > 3) {
+      return true;
     }
     if (minor < 1) {
       return false;
+    } else if (minor > 1) {
+      return true;
     }
-    if (patch <= 3) {
-      return false;
-    }
-    return true;
+    return patch >= 4;
   }
 
   const [filters, setFilters] = useState<GenericLogFilter[]>(showFilter ? [
@@ -193,7 +189,8 @@ const LogSection: React.FC<Props> = ({
     setSelectedFilterValues({
       revision: filterOpts?.revision ?? GenericLogFilter.getDefaultOption("revision").value,
       output_stream: filterOpts?.output_stream ?? GenericLogFilter.getDefaultOption("output_stream").value,
-      pod_name: getSelectorFromServiceQueryParam(filterOpts?.service) ?? GenericLogFilter.getDefaultOption("pod_name").value,
+      pod_name: getPodSelectorFromServiceName(filterOpts?.service, services) ?? GenericLogFilter.getDefaultOption("pod_name").value,
+      service_name: filterOpts?.service ?? GenericLogFilter.getDefaultOption("service_name").value,
     });
   };
 
@@ -281,6 +278,7 @@ const LogSection: React.FC<Props> = ({
                   logs={logs}
                   appName={appName}
                   filters={filters}
+                  services={services}
                 />
                 <LoadMoreButton
                   active={selectedDate && logs.length !== 0}
@@ -319,7 +317,6 @@ const LogSection: React.FC<Props> = ({
   useEffect(() => {
     // determine if the agent is installed properly - if not, start by render upgrade screen
     checkForAgent();
-    resetSearch();
   }, []);
 
   useEffect(() => {
@@ -332,65 +329,43 @@ const LogSection: React.FC<Props> = ({
     return () => clearInterval(checkForAgentInterval);
   }, [isPorterAgentInstalling]);
 
-  const checkForAgent = () => {
+  const checkForAgent = async () => {
     const project_id = currentProject?.id;
     const cluster_id = currentCluster?.id;
 
-    api
-      .detectPorterAgent("<token>", {}, { project_id, cluster_id })
-      .then((res) => {
-        if (res.data?.version != "v3") {
-          setHasPorterAgent(false);
-        } else {
-          // next, check whether logs can be queried - if they can, we're good to go
-          const filters = {
-            revision: currentChart.version.toString(),
-            match_prefix: currentChart.name,
-          };
+    if (!project_id || !cluster_id) {
+      return;
+    }
 
-          api
-            .getLogPodValues("<TOKEN>", filters, {
-              project_id: currentProject.id,
-              cluster_id: currentCluster.id,
-            })
-            .then((res) => {
-              setHasPorterAgent(true);
-              setIsPorterAgentInstalling(false);
-              setIsLoading(false);
-            })
-            .catch((err) => {
-              // do nothing - this is expected while installing
-              setLogsError(err);
-              setIsLoading(false);
-            });
+    try {
+      const res = await api.detectPorterAgent("<token>", {}, { project_id, cluster_id });
 
-          const agentImage = res.data?.image;
-          if (!isAgentVersionUpdated(agentImage)) {
-            setFilters([
-              {
-                name: "pod_name",
-                displayName: "Service",
-                default: GenericLogFilter.getDefaultOption("pod_name"),
-                options: services?.map(s => {
-                  return GenericFilterOption.of(s.name, `${s.name}-${s.type == "worker" ? "wkr" : s.type}`)
-                }) ?? [],
-                setValue: (value: string) => {
-                  setSelectedFilterValues((s) => ({
-                    ...s,
-                    pod_name: value,
-                  }));
-                }
-              },
-            ])
-          }
-        }
-      })
-      .catch((err) => {
-        if (err.response?.status === 404) {
-          setHasPorterAgent(false);
-          setIsLoading(false);
-        }
-      });
+      setHasPorterAgent(true);
+
+      const agentImage = res.data?.image;
+      if (!isAgentVersionUpdated(agentImage)) {
+        setFilters([
+          {
+            name: "pod_name",
+            displayName: "Service",
+            default: GenericLogFilter.getDefaultOption("pod_name"),
+            options: services?.map(s => {
+              return GenericFilterOption.of(s.name, `${s.name}-${s.type == "worker" ? "wkr" : s.type}`)
+            }) ?? [],
+            setValue: (value: string) => {
+              setSelectedFilterValues((s) => ({
+                ...s,
+                pod_name: value,
+              }));
+            }
+          },
+        ])
+      }
+    } catch (err) {
+      if (err.response?.status === 404) {
+        setHasPorterAgent(false);
+      }
+    }
   };
 
   const installAgent = async () => {

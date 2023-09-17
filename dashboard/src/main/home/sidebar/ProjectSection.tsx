@@ -2,14 +2,15 @@ import React, { Component } from "react";
 import styled from "styled-components";
 import gradient from "assets/gradient.png";
 
+import api from "shared/api"; 
 import { Context } from "shared/Context";
-import { ProjectType } from "shared/types";
+import { ProjectListType, ProjectType } from "shared/types";
 import { pushFiltered } from "shared/routing";
 import { RouteComponentProps, withRouter } from "react-router";
 
 type PropsType = RouteComponentProps & {
   currentProject: ProjectType;
-  projects: ProjectType[];
+  projects: ProjectListType[];
 };
 
 type StateType = {
@@ -46,16 +47,21 @@ class ProjectSection extends Component<PropsType, StateType> {
 
   renderOptionList = () => {
     let { setCurrentProject, setCurrentCluster, currentProject } = this.context;
-    return this.props.projects.map((project: ProjectType, i: number) => {
+    return this.props.projects.map((projectListEntry: ProjectListType, i: number) => {
       return (
         <Option
           key={i}
-          selected={project.name === this.props.currentProject.name}
-          onClick={() => {
+          selected={projectListEntry.name === this.props.currentProject.name}
+          onClick={async () => {
             this.setState({ expanded: false });
-            if (project.id !== currentProject.id) {
+            if (projectListEntry.id !== currentProject.id) {
               setCurrentCluster(null);
             }
+
+            const project = await api
+              .getProject("<token>", {}, { id: projectListEntry.id })
+              .then((res) => res.data as ProjectType);
+
             setCurrentProject(project, () => {
               pushFiltered(this.props, "/dashboard", ["project_id"]);
             });
@@ -63,9 +69,9 @@ class ProjectSection extends Component<PropsType, StateType> {
         >
           <ProjectIcon>
             <ProjectImage src={gradient} />
-            <Letter>{project.name[0].toUpperCase()}</Letter>
+            <Letter>{projectListEntry.name[0].toUpperCase()}</Letter>
           </ProjectIcon>
-          <ProjectLabel>{project.name}</ProjectLabel>
+          <ProjectLabel>{projectListEntry.name}</ProjectLabel>
         </Option>
       );
     });
@@ -174,7 +180,7 @@ const Option = styled.div`
   border-top: 1px solid #00000000;
   border-bottom: 1px solid
     ${(props: { selected: boolean; lastItem?: boolean }) =>
-      props.lastItem ? "#ffffff00" : "#ffffff15"};
+    props.lastItem ? "#ffffff00" : "#ffffff15"};
   height: 45px;
   display: flex;
   align-items: center;
@@ -187,7 +193,7 @@ const Option = styled.div`
     props.selected ? "#ffffff11" : ""};
   :hover {
     background: ${(props: { selected: boolean; lastItem?: boolean }) =>
-      props.selected ? "" : "#ffffff22"};
+    props.selected ? "" : "#ffffff22"};
   }
 
   > i {
@@ -283,6 +289,6 @@ const MainSelector = styled.div`
     justify-content: center;
     border-radius: 20px;
     background: ${(props: { expanded: boolean }) =>
-      props.expanded ? "#ffffff22" : ""};
+    props.expanded ? "#ffffff22" : ""};
   }
 `;
